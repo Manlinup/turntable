@@ -34,7 +34,6 @@ class Turntable extends Model{
         if (empty($isShop)) {
             $where['status'] = 1;
         }
-
         $game = Db::name($this->name)
             ->where($where)
             ->order('listorder desc')
@@ -48,7 +47,6 @@ class Turntable extends Model{
      * 大转盘列表数据
      * @param $shopId 商户id
      * @param $turntableId 转盘id
-     * @return array
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
@@ -86,7 +84,7 @@ class Turntable extends Model{
     }
 
     /**
-     * 用户当天的抽奖次数
+     * 用户的抽奖次数
      * @param  $turntableId
      * @param  $userId
      * @param  $times 规定的单人抽奖次数
@@ -95,7 +93,7 @@ class Turntable extends Model{
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function check_user_times($turntableId,$userId,$times) {
+    public function check_user_times($turntableId,$userId,$times,$startTime,$endTime,$frequncy) {
         $data = array(
             'status' => 0,
             'prize_name' => '',
@@ -104,14 +102,24 @@ class Turntable extends Model{
         if (empty($userId)) {
             return $data;
         }
+        if ($frequncy == 1) { //每天抽奖次数
+            $userLogs = Db::name($this->turntable_log)
+                ->where('turntable_id',$turntableId)
+                ->where('userid',$userId)
+                ->where('created','>=',strtotime(date("Y-m-d ")))
+                ->where('created','<',strtotime('tomorrow'))
+                ->order('id desc')
+                ->select();
+        } elseif ($frequncy == 2) { //活动期内抽奖次数
+            $userLogs = Db::name($this->turntable_log)
+                ->where('turntable_id',$turntableId)
+                ->where('userid',$userId)
+                ->where('created','>=',$startTime)
+                ->where('created','<',$endTime)
+                ->order('id desc')
+                ->select();
+        }
 
-        $userLogs = Db::name($this->turntable_log)
-            ->where('turntable_id',$turntableId)
-            ->where('userid',$userId)
-            ->where('created','>=',strtotime(date("Y-m-d ")))
-            ->where('created','<',strtotime('tomorrow'))
-            ->order('id desc')
-            ->select();
 
         $isWin = 0;
         $prizeId = '';
@@ -175,7 +183,9 @@ class Turntable extends Model{
             ->order('a.id desc')
             ->limit(0,20)
             ->select();
-
+        foreach ($luckyLogs as $k => $v) {
+            $luckyLogs[$k]['created'] = date('Y-m-d H:i:s', $v['created']);
+        }
         return $luckyLogs;
     }
 
@@ -204,21 +214,33 @@ class Turntable extends Model{
             return -2;//活动已经结束
         }
 
-        //校验当天的抽奖情况
-        $userLogs = Db::name($this->turntable_log)
-            ->field('a.*,b.prize_name,b.img_url,b.id as p_id')
-            ->alias('a')
-            ->join($this->turntable_prize . ' b','a.prize_id = b.id')
-            ->where('a.turntable_id',$turntableId)
-            ->where('a.userid',$userId)
-            ->where('a.created','>=',strtotime(date("Y-m-d ")))
-            ->where('a.created','<',strtotime('tomorrow'))
-            ->order('a.id asc')
-            ->select();
+        if ($game['frequncy'] == 1) {//校验当天的抽奖情况
+            $userLogs = Db::name($this->turntable_log)
+                ->field('a.*,b.prize_name,b.img_url,b.id as p_id')
+                ->alias('a')
+                ->join($this->turntable_prize . ' b','a.prize_id = b.id')
+                ->where('a.turntable_id',$turntableId)
+                ->where('a.userid',$userId)
+                ->where('a.created','>=',strtotime(date("Y-m-d ")))
+                ->where('a.created','<',strtotime('tomorrow'))
+                ->order('a.id asc')
+                ->select();
+        } elseif ($game['frequncy'] == 2) {//校验活动期内的抽奖情况
+            $userLogs = Db::name($this->turntable_log)
+                ->field('a.*,b.prize_name,b.img_url,b.id as p_id')
+                ->alias('a')
+                ->join($this->turntable_prize . ' b','a.prize_id = b.id')
+                ->where('a.turntable_id',$turntableId)
+                ->where('a.userid',$userId)
+                ->where('a.created','>=',$game['start_date'])
+                ->where('a.created','<',$game['end_date'])
+                ->order('a.id asc')
+                ->select();
+        }
 
+        $resultPlay = $this->check_user_times($turntableId,$userId,$game['num_by_one'],$game['start_date'],$game['end_date'],$game['frequncy']);
         foreach ($userLogs as $k => $v) {
             if ($v['type'] == 1) {
-                $resultPlay = $this->check_user_times($turntableId,$userId,$game['num_by_one']);
                 $resultPlay['status'] = 2;
                 $resultPlay['id'] = $v['p_id'];
                 return $resultPlay;
@@ -270,8 +292,6 @@ class Turntable extends Model{
 
                 //奖品数量相应减1
                 Db::name($this->turntable_prize)->where('id', $prizeId)->setDec('num');
-
-                $resultPlay = $this->check_user_times($turntableId,$userId,$game['num_by_one']);
                 $resultPlay['status'] = 3;
                 $resultPlay['id'] = $prizeId;
                 // 提交事务
@@ -332,7 +352,7 @@ class Turntable extends Model{
      */
     public function save_game($data) {
         Db::name($this->name)->insert($data);
-        return Db::table($this->name)->getLastInsID();
+        return Db::name($this->name)->getLastInsID();
     }
 
     /**
@@ -357,9 +377,6 @@ class Turntable extends Model{
      * @return int|string
      */
     public function save_game_info($data) {
-//        foreach ($data as $k => $v) {
-//            $data[$k]['turntable_id'] = $turntableId;
-//        }
         $res = Db::name($this->turntable_prize)->insertAll($data);
         return $res;
     }
