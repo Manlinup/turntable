@@ -32,7 +32,8 @@
     4. 奖品是否有奖。可分出有奖/谢谢惠顾
     5. 奖品数量可配，没有提供前端界面。前端可根据奖品数量展示不同的模块
 
-##关于swoole
+## 关于swoole
+* tp5框架新增了一个入口文件。查看/public/swoole.php
 * swoole的转盘功能非常简单，仅用了websocket的open，onmessage，onclose回调
 * 业务逻辑和PHP正常流程完全一致。
 * swoole同级目录下放了前端文件，也仅体现出了功能。
