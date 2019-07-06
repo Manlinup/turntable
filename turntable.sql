@@ -11,7 +11,7 @@
  Target Server Version : 50635
  File Encoding         : utf-8
 
- Date: 07/03/2019 23:51:09 PM
+ Date: 07/06/2019 20:33:56 PM
 */
 
 SET NAMES utf8mb4;
@@ -33,9 +33,17 @@ CREATE TABLE `ac_turntable_game` (
   `status` tinyint(1) NOT NULL COMMENT '状态。0禁用，1正常',
   `start_date` int(11) NOT NULL COMMENT '转盘开始时间',
   `end_date` int(11) NOT NULL COMMENT '转盘结束时间',
+  `frequncy` tinyint(1) NOT NULL DEFAULT '1' COMMENT '频率。关联num_by_one。1是每天，2是活动期内',
   PRIMARY KEY (`turntable_id`) USING BTREE,
   KEY `商户id` (`shop_id`) USING BTREE
 ) ENGINE=MyISAM AUTO_INCREMENT=29 DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='大转盘表';
+
+-- ----------------------------
+--  Records of `ac_turntable_game`
+-- ----------------------------
+BEGIN;
+INSERT INTO `ac_turntable_game` VALUES ('1', '1', '大转盘', '这是一个大转盘', '3', '0', '0', '1', '1', '1561392000', '1564455600', '1');
+COMMIT;
 
 -- ----------------------------
 --  Table structure for `ac_turntable_game_log`
@@ -55,7 +63,7 @@ CREATE TABLE `ac_turntable_game_log` (
   KEY `turntable_id` (`turntable_id`) USING BTREE,
   KEY `prize_id` (`prize_id`) USING BTREE,
   KEY `userid` (`userid`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=307 DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='大转盘日志表';
+) ENGINE=InnoDB AUTO_INCREMENT=323 DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='大转盘日志表';
 
 -- ----------------------------
 --  Table structure for `ac_turntable_game_prize`
@@ -76,5 +84,12 @@ CREATE TABLE `ac_turntable_game_prize` (
   KEY `turntable_id` (`turntable_id`) USING BTREE,
   KEY `type` (`type`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=129 DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='大转盘活动表';
+
+-- ----------------------------
+--  Records of `ac_turntable_game_prize`
+-- ----------------------------
+BEGIN;
+INSERT INTO `ac_turntable_game_prize` VALUES ('1', '1', '一等奖', '', '10', '1.00', '1', '1', '1', '0'), ('2', '1', '二等奖', '', '10', '1.00', '1', '1', '1', '0'), ('3', '1', '三等奖', '', '2', '1.00', '1', '1', '1', '0'), ('4', '1', '谢谢惠顾', '', '9896', '69.00', '1', '0', '1', '0'), ('5', '1', '哇特等奖', 'img_url', '1', '1.00', '1', '1', '1', '2019');
+COMMIT;
 
 SET FOREIGN_KEY_CHECKS = 1;
